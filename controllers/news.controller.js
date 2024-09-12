@@ -2,6 +2,10 @@ const { formidable } = require("formidable");
 const cloudinary = require("cloudinary").v2;
 const moment = require("moment");
 const newsModel = require("../models/news.model");
+const imageModel = require("../models/gallery.model");
+const {
+  mongo: { ObjectId },
+} = require("mongoose");
 
 const addNews = async (req, res) => {
   const { id, name, category } = req.userInfo || {}; // Ensure userInfo exists
@@ -35,13 +39,27 @@ const addNews = async (req, res) => {
       image: url,
     });
 
-    res.status(201).json({ message: "news adder", news });
+    res.status(201).json({ message: "News create successfull", news });
   } catch (error) {
-    console.log(error);
-    return res.status(500).json({
-      message: "Something went wrong",
-      error: error.message,
+    res.status(500).json({
+      status: "Failed",
+      message: "Unable to create news, Please try again letter.",
     });
   }
 };
-module.exports = { addNews };
+
+const getImages = async (req, res) => {
+  try {
+    const { id } = req.userInfo;
+    const images = await imageModel
+      .find({ writerId: new ObjectId(id) })
+      .sort({ createdAt: -1 });
+    return res.status(200).json({ images: images });
+  } catch (error) {
+    res.status(500).json({
+      status: "Failed",
+      message: "Unable to get images, Please try again letter.",
+    });
+  }
+};
+module.exports = { addNews, getImages };
