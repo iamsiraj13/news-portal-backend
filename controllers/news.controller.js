@@ -3,9 +3,7 @@ const cloudinary = require("cloudinary").v2;
 const moment = require("moment");
 const newsModel = require("../models/news.model");
 const imageModel = require("../models/gallery.model");
-const {
-  mongo: { ObjectId },
-} = require("mongoose");
+const { Types } = require("mongoose");
 
 const addNews = async (req, res) => {
   const { id, name, category } = req.userInfo || {}; // Ensure userInfo exists
@@ -52,14 +50,54 @@ const getImages = async (req, res) => {
   try {
     const { id } = req.userInfo;
     const images = await imageModel
-      .find({ writerId: new ObjectId(id) })
+      .find({ writerId: new Types.ObjectId(id) }) // Correct ObjectId usage
       .sort({ createdAt: -1 });
-    return res.status(200).json({ images: images });
+    return res.status(200).json({
+      status: "Success",
+      images: images,
+    });
   } catch (error) {
+    console.log(error);
     res.status(500).json({
       status: "Failed",
-      message: "Unable to get images, Please try again letter.",
+      message: "Unable to get images, Please try again later.", // Fixed typo
     });
   }
 };
-module.exports = { addNews, getImages };
+
+const addImages = async (req, res) => {
+  try {
+    const { id } = req.userInfo;
+    const form = formidable({});
+    // Make sure to load the Cloudinary credentials properly
+    cloudinary.config({
+      cloud_name: process.env.CLOUD_NAME,
+      api_key: process.env.API_KEY,
+      api_secret: process.env.API_SECRET,
+      secure: true,
+    });
+
+    cosnt[(fields, files)] = await form.parse(req);
+
+    let allImages = [];
+    const { images } = files;
+    for (let i = 0; i < images.length; i++) {
+      const { url } = await cloudinary.uploader.upload(images[i].filepath, {
+        folder: "news",
+      });
+
+      allImages.push({ writerId: id, url });
+    }
+
+    const image = await imageModel.insertMany(allImages);
+    return res.status(200).json({
+      images: image,
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "Failed",
+      message: "Something went wrong",
+    });
+  }
+};
+module.exports = { addNews, getImages, addImages };
