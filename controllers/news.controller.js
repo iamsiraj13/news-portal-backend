@@ -1,15 +1,16 @@
 const { formidable } = require("formidable");
 const cloudinary = require("cloudinary").v2;
 const moment = require("moment");
+
 const newsModel = require("../models/news.model");
 const imageModel = require("../models/gallery.model");
 const { Types } = require("mongoose");
 
 const addNews = async (req, res) => {
-  const { id, name, category } = req.userInfo || {}; // Ensure userInfo exists
+  const { id, name, category } = req.userInfo || {};
 
   const form = formidable({});
-  // Make sure to load the Cloudinary credentials properly
+
   cloudinary.config({
     cloud_name: process.env.CLOUD_NAME,
     api_key: process.env.API_KEY,
@@ -32,16 +33,16 @@ const addNews = async (req, res) => {
       slug: title[0].trim().split(" ").join("-"),
       category,
       description: description[0],
-      date: moment().format("LL"),
+      date: moment(new Date()).format("MMMM d, YYYY"), // Date format
       writerName: name,
       image: url,
     });
 
-    res.status(201).json({ message: "News create successfull", news });
+    res.status(201).json({ message: "News created successfully", news });
   } catch (error) {
     res.status(500).json({
       status: "Failed",
-      message: "Unable to create news, Please try again letter.",
+      message: "Unable to create news, Please try again later.",
     });
   }
 };
@@ -116,4 +117,31 @@ const addImages = async (req, res) => {
     });
   }
 };
-module.exports = { addNews, getImages, addImages };
+
+const getDashboardNews = async (req, res) => {
+  try {
+    const { id, role } = req.userInfo;
+
+    if (role === "admin") {
+      const news = await newsModel.find({}).sort({ createdAt: -1 });
+      return res.status(200).json({
+        news,
+      });
+    } else {
+      const news = await newsModel
+        .find({ writerId: new Types.ObjectId(id) })
+        .sort({ createdAt: -1 });
+      return res.status(200).json({
+        news,
+      });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      status: "Failed",
+      message: "Unable to get news, Please try again later.",
+    });
+  }
+};
+
+module.exports = { addNews, getImages, addImages, getDashboardNews };
