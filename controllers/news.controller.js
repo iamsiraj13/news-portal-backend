@@ -50,7 +50,7 @@ const getImages = async (req, res) => {
   try {
     const { id } = req.userInfo;
     const images = await imageModel
-      .find({ writerId: new Types.ObjectId(id) }) // Correct ObjectId usage
+      .find({ writerId: new Types.ObjectId(id) })
       .sort({ createdAt: -1 });
     return res.status(200).json({
       status: "Success",
@@ -60,7 +60,7 @@ const getImages = async (req, res) => {
     console.log(error);
     res.status(500).json({
       status: "Failed",
-      message: "Unable to get images, Please try again later.", // Fixed typo
+      message: "Unable to get images, Please try again later.",
     });
   }
 };
@@ -68,8 +68,11 @@ const getImages = async (req, res) => {
 const addImages = async (req, res) => {
   try {
     const { id } = req.userInfo;
-    const form = formidable({});
-    // Make sure to load the Cloudinary credentials properly
+
+    // Create formidable instance (no 'new' keyword needed)
+    const form = formidable();
+
+    // Load Cloudinary credentials
     cloudinary.config({
       cloud_name: process.env.CLOUD_NAME,
       api_key: process.env.API_KEY,
@@ -77,26 +80,39 @@ const addImages = async (req, res) => {
       secure: true,
     });
 
-    cosnt[(fields, files)] = await form.parse(req);
+    // Parse the form using a promise
+    const parsedForm = () =>
+      new Promise((resolve, reject) => {
+        form.parse(req, (err, fields, files) => {
+          if (err) reject(err);
+          resolve({ fields, files });
+        });
+      });
+
+    const { fields, files } = await parsedForm();
 
     let allImages = [];
-    const { images } = files;
+
+    // Handle single or multiple images
+    const images = Array.isArray(files.images) ? files.images : [files.images];
+
     for (let i = 0; i < images.length; i++) {
       const { url } = await cloudinary.uploader.upload(images[i].filepath, {
         folder: "news",
       });
-
       allImages.push({ writerId: id, url });
     }
 
     const image = await imageModel.insertMany(allImages);
     return res.status(200).json({
       images: image,
+      message: "Images added successfull",
     });
   } catch (error) {
+    // Useful for debugging
     res.status(500).json({
       status: "Failed",
-      message: "Something went wrong",
+      message: error.message || "Something went wrong",
     });
   }
 };
