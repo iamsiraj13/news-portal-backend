@@ -233,6 +233,27 @@ const updateNews = async (req, res) => {
     });
   }
 };
+
+const updateNewsStatus = async (req, res) => {
+  const { newsId } = req.params;
+  const { status } = req.body;
+  const { role } = req.userInfo;
+  if (role === "admin") {
+    const news = await newsModel.findByIdAndUpdate(
+      newsId,
+      { status },
+      { new: true }
+    );
+    return res.status(200).json({
+      news,
+      message: "News status updated successfully",
+    });
+  } else {
+    return res.status(403).json({
+      message: "You are not authorized to update this news",
+    });
+  }
+};
 module.exports = {
   addNews,
   getImages,
@@ -240,4 +261,5 @@ module.exports = {
   getDashboardNews,
   getDashboardNewsById,
   updateNews,
+  updateNewsStatus,
 };
